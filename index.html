@@ -30,7 +30,7 @@ const stopsv = document.querySelector("#stopsv");
 
 const W = 256;
 const H = 256;
-const FPS = 60;           // 生成フレーム速度（PREGEN=falseの時）
+const FPS = 60;           // 生成フレーム速度(PREGEN=falseの時)
 const PREGEN = false;     // trueにするとフレーム列を先に作ってループ
 const FRAME_COUNT = 120;  // PREGEN用
 
@@ -56,7 +56,7 @@ if (!adapter) throw new Error("No adapter");
 const device = await adapter.requestDevice();
 const ctx = canvas.getContext("webgpu");
 
-// ---- canvas configure（リサイズ時に再configureする）----
+// ---- canvas configure(リサイズ時に再configureする)----
 let canvasFormat = "rgba16float";
 let hdrMode = "unknown";
 
@@ -93,7 +93,7 @@ let uploadTex = device.createTexture({
 });
 let uploadView = uploadTex.createView();
 
-// ---- shader（sampler無し、textureLoadで読む）----
+// ---- shader(sampler無し、textureLoadで読む)----
 const shader = /* wgsl */`
 struct U {
   canvasW: u32,
@@ -116,11 +116,12 @@ struct U {
   let sx = clamp(i32(pos.x), 0, i32(u.canvasW) - 1);
   let sy = clamp(i32(pos.y), 0, i32(u.canvasH) - 1);
 
-  // キャンバスをテクスチャにフィット（最近傍拡大縮小）
+  // キャンバスをテクスチャにフィット(最近傍拡大縮小)
   let tx = (sx * i32(dim.x)) / max(1, i32(u.canvasW));
   let ty = (sy * i32(dim.y)) / max(1, i32(u.canvasH));
 
   return textureLoad(t, vec2<i32>(tx, ty), 0);
+  //return vec4(5.0, 5.0, 5.0, 1.0);
 }
 `;
 const module = device.createShaderModule({ code: shader });
@@ -152,6 +153,7 @@ function makePipelineAndBindGroup() {
 function makeFrame(t){
   const a = new Float16Array(W * H * 4);
   const maxStops = parseFloat(stopsEl.value);
+  const exp = parseFloat(expEl.value);   // exposure;
   // 右方向に 2^0 .. 2^maxStops のレンジを作って、HDR階調が出るか試す
   for (let y = 0; y < H; y++){
     for (let x = 0; x < W; x++){
@@ -162,10 +164,8 @@ function makeFrame(t){
       const hdrRamp = Math.pow(2, u * maxStops); // 1..2^maxStops
       const wave = 0.5 + 0.5 * Math.sin(t * 2 + u * 10 + v * 6);
 
-      // “白より上”を含む値（HDR向け）
+      // "白より上"を含む値(HDR向け)
       const base = 0.1 + hdrRamp * (0.2 + 0.8 * wave); // だいたい 0.1..(2^maxStops)
-
-      const exp = parseFloat(expEl.value);   // exposure;
 
       a[i+0] = base * u * exp;        // R
       a[i+1] = base * v * exp;        // G
@@ -215,7 +215,7 @@ function uploadFloat16RGBA(frameF16){
   );
 }
 
-// ---- リサイズ：canvas.width/height変更時は再configure & pipeline作り直し ----
+// ---- リサイズ:canvas.width/height変更時は再configure & pipeline作り直し ----
 function resizeCanvas(){
   const dpr = devicePixelRatio || 1;
   const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
@@ -283,3 +283,4 @@ requestAnimationFrame(tick);
 canvas.onclick = () => canvas.requestFullscreen();
 </script>
 </html>
+
