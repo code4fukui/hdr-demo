@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
-<title>HDR DEMO by WebGPU</title>
+<title>HDR DEMO by WebGPU (rgba16float + Float16Array)</title>
 <style>
   html,body{height:100%;margin:0;background:#111;color:#ddd;font-family:system-ui}
   canvas{width:100%;height:100%;display:block}
@@ -46,6 +46,11 @@ if (!navigator.gpu) {
   throw new Error("WebGPU not supported");
 }
 
+if (!globalThis.Float16Array) {
+  setStatus("Float16Array not supported in this browser");
+  throw new Error("Float16Array not supported");
+}
+
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) throw new Error("No adapter");
 const device = await adapter.requestDevice();
@@ -80,10 +85,10 @@ function configureCanvas() {
 
 let pipeline, bindGroup;
 
-// ---- アップロード用テクスチャ：RGBA32Float（Float32Arrayをそのままコピー）----
+// ---- アップロード用テクスチャ: rgba16float (Float16Arrayをそのままコピー)----
 let uploadTex = device.createTexture({
   size: [W, H, 1],
-  format: "rgba32float",
+  format: "rgba16float",
   usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
 });
 let uploadView = uploadTex.createView();
@@ -95,7 +100,7 @@ struct U {
   canvasH: u32,
 };
 
-@group(0) @binding(0) var t: texture_2d<f32>;
+@group(0) @binding(0) var t: texture_2d<f32>; // ← underlyingが16-bitでも読み出しはf32でOK
 @group(0) @binding(1) var<uniform> u: U;
 
 @vertex fn vs(@builtin(vertex_index) i:u32) -> @builtin(position) vec4<f32> {
@@ -143,9 +148,9 @@ function makePipelineAndBindGroup() {
   });
 }
 
-// ---- Float32Arrayフレーム生成（RGBA）----
+// ---- Float16Arrayフレーム生成(RGBA)----
 function makeFrame(t){
-  const a = new Float32Array(W * H * 4);
+  const a = new Float16Array(W * H * 4);
   const maxStops = parseFloat(stopsEl.value);
   // 右方向に 2^0 .. 2^maxStops のレンジを作って、HDR階調が出るか試す
   for (let y = 0; y < H; y++){
@@ -176,25 +181,25 @@ if (PREGEN){
   frames = Array.from({length: FRAME_COUNT}, (_,k)=>makeFrame(k/FRAME_COUNT * Math.PI*2));
 }
 
-// ---- writeTexture（bytesPerRow 256アライメント対応）----
-function uploadFloat32RGBA(frameF32){
-  // rgba32float = 16 bytes/px
-  const bytesPerPixel = 16;
+// ---- writeTexture(bytesPerRow 256アライメント対応) for rgba16float ----
+function uploadFloat16RGBA(frameF16){
+  // rgba16float = 8 bytes/px (4ch * 2 bytes)
+  const bytesPerPixel = 8;
   const unpaddedBPR = W * bytesPerPixel;
   const paddedBPR = (unpaddedBPR + 255) & ~255;
 
   if (paddedBPR === unpaddedBPR) {
     device.queue.writeTexture(
       { texture: uploadTex },
-      frameF32,
+      frameF16, // Float16Arrayをそのまま
       { bytesPerRow: unpaddedBPR, rowsPerImage: H },
       { width: W, height: H, depthOrArrayLayers: 1 }
     );
     return;
   }
 
-  // パディング：Uint8で1行ずつコピー
-  const srcBytes = new Uint8Array(frameF32.buffer, frameF32.byteOffset, frameF32.byteLength);
+  // パディング:Uint8で1行ずつコピー
+  const srcBytes = new Uint8Array(frameF16.buffer, frameF16.byteOffset, frameF16.byteLength);
   const padded = new Uint8Array(paddedBPR * H);
   for (let y = 0; y < H; y++){
     const srcOff = y * unpaddedBPR;
@@ -245,7 +250,7 @@ function tick(now){
   if (frameIndex !== lastFrameIndex) {
     const t = sec;
     const frame = PREGEN ? frames[frameIndex % FRAME_COUNT] : makeFrame(t);
-    uploadFloat32RGBA(frame);
+    uploadFloat16RGBA(frame);
     lastFrameIndex = frameIndex;
   }
 
@@ -277,3 +282,4 @@ requestAnimationFrame(tick);
 
 canvas.onclick = () => canvas.requestFullscreen();
 </script>
+</html>
