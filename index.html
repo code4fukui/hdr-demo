@@ -39,7 +39,7 @@ stopsv.textContent = stopsEl.value;
 expEl.oninput = () => expv.textContent = expEl.value;
 stopsEl.oninput = () => stopsv.textContent = stopsEl.value;
 
-function setStatus(s){ statusEl.textContent = s; }
+function setStatus(s) { statusEl.textContent = s; }
 
 if (!navigator.gpu) {
   setStatus("WebGPU not supported");
@@ -150,13 +150,13 @@ function makePipelineAndBindGroup() {
 }
 
 // ---- Float16Arrayフレーム生成(RGBA)----
-function makeFrame(t){
+function makeFrame(t) {
   const a = new Float16Array(W * H * 4);
   const maxStops = parseFloat(stopsEl.value);
   const exp = parseFloat(expEl.value);   // exposure;
   // 右方向に 2^0 .. 2^maxStops のレンジを作って、HDR階調が出るか試す
-  for (let y = 0; y < H; y++){
-    for (let x = 0; x < W; x++){
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
       const u = x / (W - 1);
       const v = y / (H - 1);
@@ -167,22 +167,22 @@ function makeFrame(t){
       // "白より上"を含む値(HDR向け)
       const base = 0.1 + hdrRamp * (0.2 + 0.8 * wave); // だいたい 0.1..(2^maxStops)
 
-      a[i+0] = base * u * exp;        // R
-      a[i+1] = base * v * exp;        // G
-      a[i+2] = base * (1 - u) * exp;     // B
-      a[i+3] = 1.0;             // A
+      a[i] = base * u * exp;        // R
+      a[i + 1] = base * v * exp;        // G
+      a[i + 2] = base * (1 - u) * exp;     // B
+      a[i + 3] = 1.0;             // A
     }
   }
   return a;
 }
 
 let frames = null;
-if (PREGEN){
-  frames = Array.from({length: FRAME_COUNT}, (_,k)=>makeFrame(k/FRAME_COUNT * Math.PI*2));
+if (PREGEN) {
+  frames = Array.from({length: FRAME_COUNT}, (_,k) => makeFrame(k / FRAME_COUNT * Math.PI * 2));
 }
 
 // ---- writeTexture(bytesPerRow 256アライメント対応) for rgba16float ----
-function uploadFloat16RGBA(frameF16){
+function uploadFloat16RGBA(frameF16) {
   // rgba16float = 8 bytes/px (4ch * 2 bytes)
   const bytesPerPixel = 8;
   const unpaddedBPR = W * bytesPerPixel;
@@ -201,7 +201,7 @@ function uploadFloat16RGBA(frameF16){
   // パディング:Uint8で1行ずつコピー
   const srcBytes = new Uint8Array(frameF16.buffer, frameF16.byteOffset, frameF16.byteLength);
   const padded = new Uint8Array(paddedBPR * H);
-  for (let y = 0; y < H; y++){
+  for (let y = 0; y < H; y++) {
     const srcOff = y * unpaddedBPR;
     const dstOff = y * paddedBPR;
     padded.set(srcBytes.subarray(srcOff, srcOff + unpaddedBPR), dstOff);
@@ -216,11 +216,11 @@ function uploadFloat16RGBA(frameF16){
 }
 
 // ---- リサイズ:canvas.width/height変更時は再configure & pipeline作り直し ----
-function resizeCanvas(){
+function resizeCanvas() {
   const dpr = devicePixelRatio || 1;
   const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
   const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
-  if (canvas.width !== w || canvas.height !== h){
+  if (canvas.width !== w || canvas.height !== h) {
     canvas.width = w;
     canvas.height = h;
 
@@ -240,7 +240,7 @@ makePipelineAndBindGroup();
 let start = performance.now();
 let lastFrameIndex = -1;
 
-function tick(now){
+function tick(now) {
   resizeCanvas();
 
   const sec = (now - start) / 1000;
@@ -283,4 +283,3 @@ requestAnimationFrame(tick);
 canvas.onclick = () => canvas.requestFullscreen();
 </script>
 </html>
-
