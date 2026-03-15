@@ -1,5 +1,7 @@
 # hdr-demo
 
+> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
+
 A WebGPU-based HDR rendering demo using `rgba16float` and `Float16Array`.
 
 ## Demo
