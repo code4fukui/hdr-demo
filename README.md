@@ -23,4 +23,4 @@ A WebGPU-based HDR rendering demo using `rgba16float` and `Float16Array`.
 3. The canvas will automatically resize to fit the browser window.
 
 ## License
-This project is licensed under the [MIT License](LICENSE).
+MIT License — see [LICENSE](LICENSE).
